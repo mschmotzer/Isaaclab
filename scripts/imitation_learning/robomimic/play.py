@@ -1,3 +1,6 @@
+
+
+
 # Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
@@ -23,6 +26,7 @@ Args:
 
 
 import argparse
+from collections import deque
 import pickle
 import json 
 import numpy as np
@@ -105,8 +109,53 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
     # Add observation logging 
     observation_log = [] if save_observations else None
     csv_data = [] if save_observations else None
+    
 
+    training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
+    ob_buffer=[]
+    context_length = 1  # Default context length
     # Main rollout loop
+    try:
+            # Access the algo config from the policy
+            algo_config = policy.policy.global_config.algo
+            
+            if hasattr(algo_config, 'transformer') and algo_config.transformer.enabled:
+                context_length = algo_config.transformer.context_length
+                seq_length = policy.policy.global_config.train.seq_length
+
+            else:
+                print("[INFO] Model is not using transformer architecture")
+                
+    except AttributeError as e:
+            print(f"[WARNING] Could not read model configuration: {e}")
+    obs = copy.deepcopy(obs_dict["policy"]) # Access the PolicyCfg observations
+    for ob in obs:
+        obs[ob] = torch.squeeze(obs[ob])
+
+    # Check if environment image observations -> Not needed for stack environments
+    if hasattr(env.cfg, "image_obs_list"):
+        # Process image observations for robomimic inference
+        for image_name in env.cfg.image_obs_list:
+            if image_name in obs_dict["policy"].keys():
+                # Convert from chw uint8 to hwc normalized float
+                image = torch.squeeze(obs_dict["policy"][image_name])
+                image = image.permute(2, 0, 1).clone().float()
+                image = image / 255.0
+                image = image.clip(0.0, 1.0)
+                obs[image_name] = image
+
+    # 2. Filter observations to match training configuration
+    training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
+    filtered_obs = {key: obs[key] for key in training_obs_keys if key in obs}
+
+    ob_buffer = deque(maxlen=context_length)
+
+    # Then the buffer management becomes simply:
+    # 3. Manage observation buffer with context_length
+    while len(ob_buffer) < context_length:
+        ob_buffer.append(filtered_obs)
+        print(":) Filling observation buffer... Current size:", len(ob_buffer))
+
     for i in range(horizon):
         # 1. Observation Preprocessing
         obs = copy.deepcopy(obs_dict["policy"]) # Access the PolicyCfg observations
@@ -128,6 +177,38 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
         # 2. Filter observations to match training configuration
         training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
         filtered_obs = {key: obs[key] for key in training_obs_keys if key in obs}
+
+        
+
+        # Then the buffer management becomes simply:
+        # 3. Manage observation buffer with context_length
+        ob_buffer.append(filtered_obs)
+        import numpy as np
+
+        ob_buffer.append(filtered_obs)
+        # Convert deque of dicts -> dict of stacked arrays
+        filtered_obs = {
+            k: np.stack([d[k].detach().cpu().numpy() for d in ob_buffer], axis=0)
+            for k in filtered_obs.keys()
+        }
+        """# 4. Prepare input for policy based on model type
+        if context_length > 1:
+            # For transformer models, use the entire buffer as sequence
+            policy_input = ob_buffer.copy()  # Use all observations in buffer
+            
+
+            # Convert to proper format for transformer
+            # Stack observations along sequence dimension
+            stacked_obs = {}
+            for key in training_obs_keys:
+                if key in policy_input[0]:
+                    # Stack all observations for this key: [context_length, obs_dim]
+                    stacked_values = torch.stack([obs[key] for obs in policy_input])
+                    # Add batch dimension: [1, context_length, obs_dim]
+                    stacked_obs[key] = stacked_values.unsqueeze(0)
+            
+            filtered_obs = stacked_obs
+            print("SHAPE OBS:--------------", filtered_obs)"""
 
         # Log full observations to terminal with detailed breakdown
         print(f"\n=== STEP {i} OBSERVATIONS ===")
@@ -168,18 +249,19 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
                         
                 else:
                     # For other observations (eef_pos, eef_quat, gripper_pos)
-                    if key == "eef_pos":
-                        pos = value.cpu().numpy()
-                        print(f"{key}: [{pos[0]:.4f}, {pos[1]:.4f}, {pos[2]:.4f}] 🤖")
-                    elif key == "eef_quat":
-                        quat = value.cpu().numpy()
-                        print(f"{key}: [{quat[0]:.4f}, {quat[1]:.4f}, {quat[2]:.4f}, {quat[3]:.4f}] 🔄")
-                    elif key == "gripper_pos":
-                        grip = value.cpu().numpy()
-                        grip_state = "OPEN" if grip[0] > 0.03 else "CLOSED" if grip[0] < 0.01 else "PARTIAL"
-                        print(f"{key}: [{grip[0]:.4f}] 🖐️ ({grip_state})")
-                    else:
-                        print(f"{key}: {value.cpu().numpy()}")
+                    if context_length == 1 and value.dim() == 3:
+                        if key == "eef_pos":
+                            pos = value.cpu().numpy()
+                            print(f"{key}: [{pos[0]:.4f}, {pos[1]:.4f}, {pos[2]:.4f}] 🤖")
+                        elif key == "eef_quat":
+                            quat = value.cpu().numpy()
+                            print(f"{key}: [{quat[0]:.4f}, {quat[1]:.4f}, {quat[2]:.4f}, {quat[3]:.4f}] 🔄")
+                        elif key == "gripper_pos":
+                            grip = value.cpu().numpy()
+                            grip_state = "OPEN" if grip[0] > 0.03 else "CLOSED" if grip[0] < 0.01 else "PARTIAL"
+                            print(f"{key}: [{grip[0]:.4f}] 🖐️ ({grip_state})")
+                        else:
+                            print(f"{key}: {value.cpu().numpy()}")
             else:
                 print(f"{key}: {value}")
         print("=" * 60)
@@ -283,10 +365,11 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
                         csv_entry["cube_1_to_cube_3_dist"] = np.linalg.norm(value_np[36:39])
             
             csv_data.append(csv_entry)
-
         # 3. Neural Network Inference / Policy Forward Pass
         actions = policy(filtered_obs)
 
+
+        print("Actions Shape: ",actions.shape)
         # 4. Action Post-Processing (only if normalization was used)
         if args_cli.norm_factor_min is not None and args_cli.norm_factor_max is not None:
             actions = (
@@ -352,7 +435,8 @@ def main():
 
     # Load robomimic policy (BC,LSTMGMM, etc.) from checkpoint
     policy, _ = FileUtils.policy_from_checkpoint(ckpt_path=args_cli.checkpoint, device=device, verbose=True)
-
+    # Read context_length from the policy configuration
+    
     # Run policy
     results = []
     all_successful_observations = []

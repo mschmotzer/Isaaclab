@@ -47,7 +47,7 @@ class FrankaCubeStackIKAbsMimicEnvCfg(FrankaCubeStackEnvCfg, MimicEnvCfg):
                 subtask_term_offset_range=(10, 20),
                 selection_strategy="nearest_neighbor_object",
                 selection_strategy_kwargs={"nn_k": 3},
-                action_noise=0.015,
+                action_noise=0.00,#0.015
                 num_interpolation_steps=5,
                 num_fixed_steps=0,
                 apply_noise_during_interpolation=False,
@@ -60,7 +60,7 @@ class FrankaCubeStackIKAbsMimicEnvCfg(FrankaCubeStackEnvCfg, MimicEnvCfg):
                 subtask_term_offset_range=(10, 20),
                 selection_strategy="nearest_neighbor_object",
                 selection_strategy_kwargs={"nn_k": 3},
-                action_noise=0.015,
+                action_noise=0.00, #0.015
                 num_interpolation_steps=5,
                 num_fixed_steps=0,
                 apply_noise_during_interpolation=False,
@@ -73,7 +73,7 @@ class FrankaCubeStackIKAbsMimicEnvCfg(FrankaCubeStackEnvCfg, MimicEnvCfg):
                 subtask_term_offset_range=(10, 20),
                 selection_strategy="nearest_neighbor_object",
                 selection_strategy_kwargs={"nn_k": 3},
-                action_noise=0.015,
+                action_noise=0.00,#0.015
                 num_interpolation_steps=5,
                 num_fixed_steps=0,
                 apply_noise_during_interpolation=False,
@@ -82,11 +82,11 @@ class FrankaCubeStackIKAbsMimicEnvCfg(FrankaCubeStackEnvCfg, MimicEnvCfg):
         subtask_configs.append(
             SubTaskConfig(
                 object_ref="cube_2",
-                subtask_term_signal=None,
-                subtask_term_offset_range=(0, 0),
+                subtask_term_signal=None,  # Fixed: added comma and lowercase
+                subtask_term_offset_range=(0,0),
                 selection_strategy="nearest_neighbor_object",
                 selection_strategy_kwargs={"nn_k": 3},
-                action_noise=0.015,
+                action_noise=0.00,#0.015
                 num_interpolation_steps=5,
                 num_fixed_steps=0,
                 apply_noise_during_interpolation=False,

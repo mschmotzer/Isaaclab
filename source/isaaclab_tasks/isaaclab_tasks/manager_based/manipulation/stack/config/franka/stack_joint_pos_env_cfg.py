@@ -46,7 +46,7 @@ class EventCfg:
         mode="reset",
         params={
             "mean": 0.0,
-            "std": 0.02,
+            "std": 0.01,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
@@ -161,7 +161,7 @@ class FrankaCubeStackEnvCfg(StackEnvCfg):
                     prim_path="{ENV_REGEX_NS}/Robot/panda_hand",
                     name="end_effector",
                     offset=OffsetCfg(
-                        pos=[0.0, 0.0, 0.1034],  # type: ignore
+                        pos=[0.00, 0.0, 0.1034],  # type: ignore  pos=[0.0, 0.0, 0.1034]
                     ),
                 ),
                 FrameTransformerCfg.FrameCfg(

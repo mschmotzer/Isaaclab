@@ -128,7 +128,7 @@ class HDF5DatasetFileHandler(DatasetFileHandlerBase):
             episode.success = h5_episode_group.attrs["success"]
 
         episode.env_id = self.get_env_name()
-
+        print("Episode", episode.get_state(10))
         return episode
 
     def write_episode(self, episode: EpisodeData):

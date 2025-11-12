@@ -32,6 +32,7 @@ class DatagenInfo:
         subtask_term_signals=None,
         target_eef_pose=None,
         gripper_action=None,
+        states=None,
     ):
         """
         Args:
@@ -70,6 +71,9 @@ class DatagenInfo:
         self.gripper_action = None
         if gripper_action is not None:
             self.gripper_action = gripper_action
+        self.states = None
+        if states is not None:
+            self.states = states
 
     def to_dict(self):
         """

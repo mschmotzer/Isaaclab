@@ -133,7 +133,7 @@ def normalize_hdf5_actions(config: Config, log_dir: str) -> str:
     return normalized_path
 
 
-def train(config: Config, device: str, log_dir: str, ckpt_dir: str, video_dir: str):
+def train(config: Config, device: str, log_dir: str, ckpt_dir: str, video_dir: str, checkpoint_path: str = None):
     """Train a model using the algorithm specified in config.
 
     Args:
@@ -201,7 +201,7 @@ def train(config: Config, device: str, log_dir: str, ckpt_dir: str, video_dir: s
             envs[env.name] = env
             print(envs[env.name])
 
-    print("")
+
 
     # setup for a new training run
     data_logger = DataLogger(log_dir, config=config, log_tb=config.experiment.logging.log_tb)
@@ -243,7 +243,6 @@ def train(config: Config, device: str, log_dir: str, ckpt_dir: str, video_dir: s
         num_workers=config.train.num_data_workers,
         drop_last=True,
     )
-
     if config.experiment.validate:
         # cap num workers for validation dataset at 1
         num_workers = min(config.train.num_data_workers, 1)
@@ -262,7 +261,16 @@ def train(config: Config, device: str, log_dir: str, ckpt_dir: str, video_dir: s
     # main training loop
     best_valid_loss = None
     last_ckpt_time = time.time()
-
+    if checkpoint_path is not None:
+        print(f"Loading checkpoint from {checkpoint_path}")
+        
+        # Load the checkpoint
+        checkpoint_dict = torch.load(checkpoint_path, map_location=device)
+        
+        # Load model weights
+        model.deserialize(checkpoint_dict["model"])
+        print("Loaded model weights from checkpoint")
+        
     # number of learning steps per epoch (defaults to a full dataset pass)
     train_num_steps = config.experiment.epoch_every_n_steps
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
@@ -401,7 +409,7 @@ def main(args: argparse.Namespace):
     # catch error during training and print it
     res_str = "finished run successfully!"
     try:
-        train(config, device, log_dir, ckpt_dir, video_dir)
+        train(config, device, log_dir, ckpt_dir, video_dir, checkpoint_path=args.checkpoint)
     except Exception as e:
         res_str = f"run failed with error:\n{e}\n\n{traceback.format_exc()}"
     print(res_str)
@@ -432,6 +440,8 @@ if __name__ == "__main__":
     parser.add_argument("--normalize_training_actions", action="store_true", default=False, help="Normalize actions")
 
     parser.add_argument("--num_epochs", type=int, default=None, help="Number of training epochs")
+
+    parser.add_argument("--checkpoint", default=None, help="Loading checkpoint")
 
     args = parser.parse_args()
 

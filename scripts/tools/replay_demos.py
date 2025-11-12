@@ -226,7 +226,7 @@ def main():
                                                     print(f"      {state_key}: [{state_str}]")
                                             else:
                                                 print(f"      {state_key}: {state_value}")
-                                
+                                print("I replay from the initial state above ^^^")
                                 env.reset_to(initial_state, torch.tensor([env_id], device=env.device), is_relative=False)
                             else:
                                 # Fallback to regular reset if no initial state is available

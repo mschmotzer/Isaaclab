@@ -416,7 +416,8 @@ class MultiWaypoint:
             obs = env.obs_buf
 
         success = bool(success_term.func(env, **success_term.params)[env_id])
-
+        #print("SUCCESS", success)
+        #success=True
         result = dict(
             states=[state],
             observations=[obs],
@@ -424,3 +425,35 @@ class MultiWaypoint:
             success=success,
         )
         return result
+        # Add this method to the MultiWaypoint class or create a simplified version
+    async def execute_simple(self, env, env_id: int) -> dict:
+        """Simplified execution for backward augmentation without success checking."""
+        
+        states = []
+        observations = []
+        actions = []
+        
+        try:
+            # Execute the waypoint
+            action = env.action_manager.process_action(
+                env_ids=torch.tensor([env_id], device=env.device),
+                **self.eef_waypoints  # eef_pose and gripper_action
+            )
+            
+            # Step environment
+            env.step(action)
+            
+            # Record state and observation
+            states.append(env.scene.get_state(is_relative=True))
+            observations.append(env.get_observations())
+            actions.append(action)
+            
+        except Exception as e:
+            print(f"[BA] Waypoint execution failed: {e}")
+        
+        return {
+            "states": states,
+            "observations": observations, 
+            "actions": actions,
+            "success": False  # Not checking success during backward augmentation
+        }

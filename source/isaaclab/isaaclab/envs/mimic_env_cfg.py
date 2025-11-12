@@ -119,7 +119,7 @@ class SubTaskConfig:
     subtask_term_offset_range: tuple = (0, 0)
     """Range for offsetting subtask termination."""
 
-    action_noise: float = 0.03
+    action_noise: float = 0.0#
     """Amplitude of action noise applied."""
 
     num_interpolation_steps: int = 5
@@ -144,8 +144,8 @@ class SubTaskConstraintType(enum.IntEnum):
     SEQUENTIAL = 0
     COORDINATION = 1
 
-    _SEQUENTIAL_FORMER = 2
-    _SEQUENTIAL_LATTER = 3
+    _SEQUENTIAL_FORMER = 3
+    _SEQUENTIAL_LATTER = 4
 
 
 class SubTaskConstraintCoordinationScheme(enum.IntEnum):

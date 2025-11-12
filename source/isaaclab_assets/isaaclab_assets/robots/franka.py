@@ -18,6 +18,7 @@ import isaaclab.sim as sim_utils
 import numpy as np
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
+from isaaclab.actuators import IdealPDActuatorCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 ##

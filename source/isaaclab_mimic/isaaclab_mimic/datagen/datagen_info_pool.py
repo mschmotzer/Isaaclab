@@ -101,13 +101,14 @@ class DataGenInfoPool:
 
         # Extract gripper actions
         gripper_actions = self.env.actions_to_gripper_actions(ep_grp["actions"])
-
+        states = ep_grp["states"] if "states" in ep_grp else None
         ep_datagen_info_obj = DatagenInfo(
             eef_pose=eef_pose,
             object_poses=object_poses_dict,
             subtask_term_signals=subtask_term_signals_dict,
             target_eef_pose=target_eef_pose,
             gripper_action=gripper_actions,
+            states=states,
         )
         self._datagen_infos.append(ep_datagen_info_obj)
 
@@ -176,7 +177,7 @@ class DataGenInfoPool:
         dataset_file_handler = HDF5DatasetFileHandler()
         dataset_file_handler.open(file_path)
         episode_names = dataset_file_handler.get_episode_names()
-
+        print("Episodes in dataset:", episode_names)
         if len(episode_names) == 0:
             return
 
@@ -184,4 +185,6 @@ class DataGenInfoPool:
             if select_demo_keys is not None and episode_name not in select_demo_keys:
                 continue
             episode = dataset_file_handler.load_episode(episode_name, self.device)
+            print("Episode", episode.get_state(10))
+
             self._add_episode(episode)

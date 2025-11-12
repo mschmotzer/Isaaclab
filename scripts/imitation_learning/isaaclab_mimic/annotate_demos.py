@@ -77,7 +77,7 @@ is_paused = False
 current_action_index = 0
 marked_subtask_action_indices = []
 skip_episode = False
-
+marked_bottleneck_action_indices = []
 
 def play_cb():
     global is_paused
@@ -98,6 +98,12 @@ def mark_subtask_cb():
     global current_action_index, marked_subtask_action_indices
     marked_subtask_action_indices.append(current_action_index)
     print(f"Marked a subtask signal at action index: {current_action_index}")
+
+def mark_bottleneck_cb():
+    global current_action_index, marked_bottleneck_action_indices
+    marked_bottleneck_action_indices.append(current_action_index)
+    print(f"Marked a bottleneck signal at action index: {current_action_index}")
+
 
 
 class PreStepDatagenInfoRecorder(RecorderTerm):
@@ -147,7 +153,7 @@ class MimicRecorderManagerCfg(ActionStateRecorderManagerCfg):
 
 def main():
     """Add Isaac Lab Mimic annotations to the given demo dataset file."""
-    global is_paused, current_action_index, marked_subtask_action_indices
+    global is_paused, current_action_index, marked_subtask_action_indices, marked_bottleneck_action_indices
 
     # Load input dataset to be annotated
     if not os.path.exists(args_cli.input_file):
@@ -218,7 +224,7 @@ def main():
                 subtask_config.subtask_term_signal for subtask_config in eef_subtask_configs
             ]
             # no need to annotate the last subtask term signal, so remove it from the list
-            subtask_term_signal_names[eef_name].pop()
+        subtask_term_signal_names[eef_name].pop()
 
     # reset environment
     env.reset()
@@ -227,8 +233,9 @@ def main():
     if not args_cli.headless and not os.environ.get("HEADLESS", 0):
         keyboard_interface = Se3Keyboard(pos_sensitivity=0.1, rot_sensitivity=0.1)
         keyboard_interface.add_callback("N", play_cb)
-        keyboard_interface.add_callback("B", pause_cb)
+        keyboard_interface.add_callback(" ", pause_cb)
         keyboard_interface.add_callback("Q", skip_episode_cb)
+        keyboard_interface.add_callback("B", mark_bottleneck_cb)
         if not args_cli.auto:
             keyboard_interface.add_callback("S", mark_subtask_cb)
         keyboard_interface.reset()
@@ -377,7 +384,7 @@ def annotate_episode_in_manual_mode(
     Returns:
         True if the episode was successfully annotated, False otherwise.
     """
-    global is_paused, marked_subtask_action_indices, skip_episode
+    global is_paused, marked_subtask_action_indices, skip_episode, marked_bottleneck_action_indices
     # iterate over the eefs for marking subtask term signals
     subtask_term_signal_action_indices = {}
     for eef_name, eef_subtask_term_signal_names in subtask_term_signal_names.items():
@@ -393,16 +400,19 @@ def annotate_episode_in_manual_mode(
             print(f"\t\t- Termination:\t{eef_subtask_term_signal_names}")
 
             print('\n\tPress "N" to begin.')
-            print('\tPress "B" to pause.')
+            print('\tPress "Space" to pause.')
             print('\tPress "S" to annotate subtask signals.')
+            print('\tPress "B" to annotate bottleneck signals.')
             print('\tPress "Q" to skip the episode.\n')
             marked_subtask_action_indices = []
+            marked_bottleneck_action_indices = []
             task_success_result = replay_episode(env, episode, success_term)
             if skip_episode:
                 print("\tSkipping the episode.")
                 return False
 
             print(f"\tSubtasks marked at action indices: {marked_subtask_action_indices}")
+            print(f"\tBottlenecks marked at action indices: {marked_bottleneck_action_indices}")
             expected_subtask_signal_count = len(eef_subtask_term_signal_names)
             if task_success_result and expected_subtask_signal_count == len(marked_subtask_action_indices):
                 print(f'\tAll {expected_subtask_signal_count} subtask signals for eef "{eef_name}" were annotated.')
@@ -435,6 +445,11 @@ def annotate_episode_in_manual_mode(
         subtask_signals = torch.ones(len(episode.data["actions"]), dtype=torch.bool)
         subtask_signals[:subtask_term_signal_action_index] = False
         annotated_episode.add(f"obs/datagen_info/subtask_term_signals/{subtask_term_signal_name}", subtask_signals)
+
+    bottleneck_signals = torch.zeros(len(episode.data["actions"]), dtype=torch.bool)
+    for index in marked_bottleneck_action_indices:
+        bottleneck_signals[index] = True
+    annotated_episode.add(f"obs/datagen_info/subtask_term_signals/bottlenecks", bottleneck_signals)
     return True
 
 

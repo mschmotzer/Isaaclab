@@ -48,6 +48,15 @@ gym.register(
 )
 
 gym.register(
+    id="Isaac-Stack-Cube-Franka-IK-Abs-Mimic-v0",
+    entry_point="isaaclab_mimic.envs:FrankaCubeStackIKAbsMimicEnv",
+    kwargs={
+        "env_cfg_entry_point": franka_stack_ik_abs_mimic_env_cfg.FrankaCubeStackIKAbsMimicEnvCfg,
+    },
+    disable_env_checker=True,
+)
+
+gym.register(
     id="Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0",
     entry_point="isaaclab_mimic.envs:FrankaCubeStackIKRelMimicEnv",
     kwargs={

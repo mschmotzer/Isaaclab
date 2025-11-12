@@ -13,7 +13,7 @@ from . import stack_joint_pos_env_cfg
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets.robots.franka import FRANKA_PANDA_REAL_ROBOT_CFG
+from isaaclab_assets.robots.franka import FRANKA_PANDA_REAL_ROBOT_CFG  
 '''This class inherits from the stack_joint_pos_env_cfg and specializes the config for inverse kinematics control.
 We keep most of the configurations from the parent class, but set the controller to use differential inverse kinematics 
 instead of joint position control.'''

@@ -89,13 +89,13 @@ class ObservationsCfg:
 
         # Implement observation noise -> Simulate state estimation errors
         object = ObsTerm(func=mdp.object_obs_with_noise,
-                        params={"position_noise_std": 0.01, "orientation_noise_std": 0.01})
+                        params={"position_noise_std": 0.0 , "orientation_noise_std": 0.00})
         eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
                         params={"noise_std": 0.01})
         eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
                         params={"noise_std": 0.01})
         gripper_pos = ObsTerm(func=mdp.gripper_pos_with_noise,
-                        params={"noise_std": 0.0005})
+                        params={"noise_std": 0.005})
 
         # Keep other observations as they are
         actions = ObsTerm(func=mdp.last_action)
@@ -166,7 +166,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "stiffness_distribution_params": (0.3, 1.7),  # ±70% variation
+            "stiffness_distribution_params": (0.7,1.3),  # ±70% variation
             "damping_distribution_params": None,
             "operation": "scale",  # Scale the base values
             "distribution": "uniform",
@@ -179,7 +179,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "mass_distribution_params": (0.95, 1.05),  # ±5% mass variation
+            "mass_distribution_params": (0.95,1.05),  # ±5% mass variation
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -285,10 +285,10 @@ class StackEnvCfg(ManagerBasedRLEnvCfg):
         self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.01  # 100Hz
-        self.sim.render_interval = 2
+        self.sim.render_interval = self.decimation
 
         # Enable domain randomization by default (can be disabled in child configs)
-        self.enable_domain_randomization = False
+        self.enable_domain_randomization = True
 
         self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01

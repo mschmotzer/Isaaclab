@@ -208,7 +208,7 @@ def update_environment_events(env, cube_poses):
 
 def rollout(policy, env, success_term, horizon, device, save_observations=False, trial_id=0, config_info=None):
     """Perform a single rollout of the policy in the environment.
-
+   
     Args:
         policy: The robomimic policy to play.
         env: The environment to play in.
@@ -225,10 +225,12 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
         observation_log: List of observations if save_observations is True, else None.
         csv_data: List of CSV-formatted observation data if save_observations is True, else None.
     """
-    # Episode initialization
+    # Episode initialization 
+    sequence_length = 1  # T
+    B = 1  
     policy.start_episode()
     obs_dict, _ = env.reset()
-
+   
     # Initialize trajectory storage
     traj = dict(actions=[], obs=[], next_obs=[])
 
@@ -236,15 +238,74 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
     observation_log = [] if save_observations else None
     csv_data = [] if save_observations else None
 
+    training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
+                   # batch size
+
+    # Buffer for one observation group (e.g., "policy")
+    observation_buffer = {key: [] for key in training_obs_keys}
     for i in range(horizon):
         # 1. Observation Preprocessing
         obs = copy.deepcopy(obs_dict["policy"])
         for ob in obs:
             obs[ob] = torch.squeeze(obs[ob])
 
-        # 2. Filter observations to match training configuration
-        training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
+        # 2. Filter observations
         filtered_obs = {key: obs[key] for key in training_obs_keys if key in obs}
+        # 3. Append new obs (real timestep) 
+        if sequence_length > 1:
+            for key in filtered_obs:
+                # remove extra batch dim if present
+                new_obs = filtered_obs[key]
+                if new_obs.ndim > 1:
+                    new_obs = new_obs.squeeze(0)  # shape [D]
+                observation_buffer[key].append(new_obs)
+                
+                if len(observation_buffer[key]) > sequence_length:
+                    observation_buffer[key].pop(0)
+                """
+                new_obs = filtered_obs[key]
+                if new_obs.ndim > 1:
+                    new_obs = new_obs.squeeze(0)  # shape [D]
+                observation_buffer[key].insert(0, new_obs)
+
+                if len(observation_buffer[key]) > sequence_length:
+                    observation_buffer[key].pop(-1)"""
+
+            # Only stack if buffer is full
+            inputs = None
+            if all(len(observation_buffer[k]) == sequence_length for k in observation_buffer):
+                # Stack each modality along time
+                inputs = {
+                    key: torch.stack(observation_buffer[key], dim=0)#.unsqueeze(0)  # [1, T, D_key]
+                    for key in training_obs_keys
+                    if key in observation_buffer
+                }
+            #print("Inputs created", {k: v.shape for k, v in inputs.items()})
+            #print("inputs: ", inputs)   
+        else:
+            inputs = filtered_obs
+            
+        """obs_seq = {}
+        for k in obs_buffer[0].keys():
+            arrs = []
+            for o in obs_buffer:
+                val = o[k]
+                val = np.concatenate([
+                    v.cpu().numpy().flatten() if torch.is_tensor(v) else np.asarray(v, dtype=np.float32).flatten()
+                    for v in val.values()
+                ])
+                # If val is a dict, flatten or select the correct subfield
+                if isinstance(val, dict):
+                    # Example: flatten all values (if all are numeric)
+                    val = np.concatenate([np.asarray(v, dtype=np.float32).flatten() for v in val.values()])
+                else:
+                    val = np.asarray(val, dtype=np.float32)
+                arrs.append(val)
+            stacked = np.stack(arrs, axis=0)
+            if stacked.ndim == 1:
+                stacked = stacked[:, None] 
+            obs_seq[k] = stacked[None, ...]
+            obs_seq[k] = torch.from_numpy(obs_seq[k]).float().to(device)"""
 
         # Log observations with configuration info
         if i == 0 and config_info:  # Only log on first step to avoid spam
@@ -327,41 +388,42 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
                                 csv_entry[f"{dist_name}_dist"] = np.linalg.norm(value_np[start_idx:start_idx+3])
             
             csv_data.append(csv_entry)
+        if inputs is not None:
+            # 3. Neural Network Inference
+            #print(f"Step {i}: Computing action")
+            actions = policy(inputs)
+            # 4. Action Post-Processing (only if normalization was used)
+            if args_cli.norm_factor_min is not None and args_cli.norm_factor_max is not None:
+                actions = (
+                    (actions + 1) * (args_cli.norm_factor_max - args_cli.norm_factor_min)
+                ) / 2 + args_cli.norm_factor_min
 
-        # 3. Neural Network Inference
-        actions = policy(filtered_obs)
+            actions = torch.from_numpy(actions).to(device=device).view(1, env.action_space.shape[1])
 
-        # 4. Action Post-Processing (only if normalization was used)
-        if args_cli.norm_factor_min is not None and args_cli.norm_factor_max is not None:
-            actions = (
-                (actions + 1) * (args_cli.norm_factor_max - args_cli.norm_factor_min)
-            ) / 2 + args_cli.norm_factor_min
+            # Log actions
+            if save_observations:
+                observation_log[-1]["action"] = actions.cpu().numpy().flatten()
+                # Add actions to CSV data
+                action_np = actions.cpu().numpy().flatten()
+                for j, action_val in enumerate(action_np):
+                    csv_data[-1][f"action_{j}"] = action_val
 
-        actions = torch.from_numpy(actions).to(device=device).view(1, env.action_space.shape[1])
+            # Apply actions to the environment
+            #print(f"Step {i}: Applying actions: {actions.cpu().numpy().flatten()}")
+            obs_dict, _, terminated, truncated, _ = env.step(actions)
+            obs = obs_dict["policy"]
 
-        # Log actions
-        if save_observations:
-            observation_log[-1]["action"] = actions.cpu().numpy().flatten()
-            # Add actions to CSV data
-            action_np = actions.cpu().numpy().flatten()
-            for j, action_val in enumerate(action_np):
-                csv_data[-1][f"action_{j}"] = action_val
+            # Record trajectory
+            traj["actions"].append(actions.tolist())
+            traj["next_obs"].append(obs)
 
-        # Apply actions to the environment
-        obs_dict, _, terminated, truncated, _ = env.step(actions)
-        obs = obs_dict["policy"]
-
-        # Record trajectory
-        traj["actions"].append(actions.tolist())
-        traj["next_obs"].append(obs)
-
-        # Check if rollout was successful
-        if bool(success_term.func(env, **success_term.params)[0]):
-            print(f"✅ Trial {trial_id} successful at step {i}")
-            return True, traj, observation_log, csv_data
-        elif terminated or truncated:
-            print(f"❌ Trial {trial_id} failed at step {i}")
-            return False, traj, observation_log, csv_data
+            # Check if rollout was successful
+            if bool(success_term.func(env, **success_term.params)[0]):
+                print(f"✅ Trial {trial_id} successful at step {i}")
+                return True, traj, observation_log, csv_data
+            elif terminated or truncated:
+                print(f"❌ Trial {trial_id} failed at step {i}")
+                return False, traj, observation_log, csv_data
 
     print(f"⏱️ Trial {trial_id} reached horizon without success")
     return False, traj, observation_log, csv_data

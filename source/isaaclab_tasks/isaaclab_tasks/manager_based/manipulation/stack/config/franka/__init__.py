@@ -78,6 +78,17 @@ gym.register(
     disable_env_checker=True,
 )
 
+# Environment with absolute IK control for Franka Emika Panda robot -> Ideal for imitation learning with BC Transformer
+gym.register(
+    id="Isaac-Stack-Cube-Franka-IK-Abs-Transformer-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": stack_ik_abs_env_cfg.FrankaCubeStackEnvCfg,
+        "robomimic_bc_cfg_entry_point": os.path.join(agents.__path__[0], "robomimic/bc_transformer_low_dim.json"),
+    },
+    disable_env_checker=True,
+)
+
 gym.register(
     id="Isaac-Stack-Cube-Instance-Randomize-Franka-IK-Rel-v0",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",

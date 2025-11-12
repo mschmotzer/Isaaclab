@@ -1,0 +1,3 @@
+source;share/isaaclab_tasks/hook/pythonpath.ps1
+source;share/isaaclab_tasks/hook/pythonpath.dsv
+source;share/isaaclab_tasks/hook/pythonpath.sh
