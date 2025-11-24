@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "1-------------------------------------",
+        "name": "200000_24_8",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -12,7 +12,7 @@
         "save": {
             "enabled": true,
             "every_n_seconds": null,
-            "every_n_epochs": 100,
+            "every_n_epochs": 250,
             "epochs": [],
             "on_best_validation": false,
             "on_best_rollout_return": false,
@@ -43,7 +43,7 @@
         "hdf5_use_swmr": true,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
-        "seq_length": 48,
+        "seq_length": 32,
         "pad_seq_length": false,
         "frame_stack": 1,
         "pad_frame_stack": true,
@@ -54,7 +54,7 @@
         "hdf5_load_next_obs": false,
         "cuda": true,
         "batch_size": 512,
-        "num_epochs": 3000,
+        "num_epochs": 2000,
         "seed": 1
     },
     "algo": {
@@ -83,7 +83,7 @@
         },
         "gmm": {
             "enabled": true,
-            "num_modes": 5,
+            "num_modes": 3,
             "min_std": 0.0001,
             "std_activation": "softplus",
             "low_noise_eval": true
@@ -98,11 +98,11 @@
             "enabled": true,
             "supervise_all_steps": true,
             "num_layers": 8,
-            "context_length": 2,
+            "context_length": 24,
             "embed_dim": 512,
             "num_heads": 8,
             "activation": "gelu",
-            "action_chunk_size": 40
+            "action_chunk_size": 8
            }
     },
     "observation": {

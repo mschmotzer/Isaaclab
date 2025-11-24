@@ -89,7 +89,7 @@ class ObservationsCfg:
 
         # Implement observation noise -> Simulate state estimation errors
         object = ObsTerm(func=mdp.object_obs_with_noise,
-                        params={"position_noise_std": 0.0 , "orientation_noise_std": 0.00})
+                        params={"position_noise_std": 0.01 , "orientation_noise_std": 0.01})
         eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
                         params={"noise_std": 0.01})
         eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
@@ -166,7 +166,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "stiffness_distribution_params": (0.7,1.3),  # ±70% variation
+            "stiffness_distribution_params": (0.4,1.2),  # ±70% variation
             "damping_distribution_params": None,
             "operation": "scale",  # Scale the base values
             "distribution": "uniform",
@@ -179,7 +179,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "mass_distribution_params": (0.95,1.05),  # ±5% mass variation
+            "mass_distribution_params": (0.98,1.02),  # ±5% mass variation
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -191,7 +191,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("cube_1"),
-            "mass_distribution_params": (0.8, 1.2),  # ±20% mass variation
+            "mass_distribution_params": (0.2, 0.8),  # ±20% mass variation
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -202,7 +202,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("cube_2"),
-            "mass_distribution_params": (0.8, 1.2),  # ±20% mass variation
+            "mass_distribution_params": (0.2, 0.8),  # ±20% mass variation
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -213,7 +213,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("cube_3"),
-            "mass_distribution_params": (0.8, 1.2),  # ±20% mass variation
+            "mass_distribution_params": (0.2, 0.8),  # ±20% mass variation
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -225,7 +225,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "latency_steps_range": (0, 3),  # 0-3 timesteps delay (0-150ms at 20Hz)
+            "latency_steps_range": (0, 1),  # 0-3 timesteps delay (0-150ms at 20Hz)
         },
     )
 
