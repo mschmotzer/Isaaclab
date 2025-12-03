@@ -20,6 +20,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab_tasks.manager_based.manipulation.stack.mdp import franka_stack_events
+from isaaclab.sensors import CameraCfg, TiledCameraCfg
 from . import mdp
 
 """This file defines the foundational configuration for the stack environment.
@@ -45,7 +46,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         # Add table offset in z direction to match the real robots configuration -> Offset coordinate frame by 0.011m
-        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0.011], rot=[0.707, 0, 0, 0.707]), # type: ignore
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0.0], rot=[0.707, 0, 0, 0.707]), # type: ignore
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
             scale=(1, 1, 0.6762),  # (x_scale, y_scale, z_scale)
@@ -64,8 +65,59 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         prim_path="/World/light",
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
+@configclass
+class ObjectTableSceneCfgRGB(InteractiveSceneCfg):
+    """Configuration for the scene with a robot and RGB camera."""
+
+    # robots: will be populated by the derived env cfg
+    robot: ArticulationCfg = MISSING # type: ignore
+    # end-effector sensor: will be populated by agent env cfg
+    ee_frame: FrameTransformerCfg = MISSING # type: ignore
+
+    # Table
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0.0, 0], rot=[0.707, 0, 0, 0.707]),
+        spawn=UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
+            scale=(1, 1, 0.6762),
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                diffuse_color=(0.0, 0.0, 0.0)  # real table color
+            ),
+        ),
+    )
+
+    # plane
+    plane = AssetBaseCfg(
+        prim_path="/World/GroundPlane",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0, 0, -0.68]), # type: ignore
+        spawn=GroundPlaneCfg(), # type: ignore
+    )
+    # Camera attached to robot link
+    camera: TiledCameraCfg =  TiledCameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/panda_hand/zed_mini_cam",
+        update_period=0.1,
+        height=480,
+        width=640,
+        data_types=["rgb"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=3.06,
+            focus_distance=50.0,
+            horizontal_aperture=4.8,
+            vertical_aperture=3.6,
+            clipping_range=(0.01, 1.0e5),
+        ),
+        offset=TiledCameraCfg.OffsetCfg(
+                        pos=(0.04, 0.0, 0.1034-0.02)
+        ),
+    )
     
 
+    # lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
+    )
 ##
 # MDP settings
 ##
@@ -89,13 +141,13 @@ class ObservationsCfg:
 
         # Implement observation noise -> Simulate state estimation errors
         object = ObsTerm(func=mdp.object_obs_with_noise,
-                        params={"position_noise_std": 0.01 , "orientation_noise_std": 0.01})
+                        params={"position_noise_std": 0.03 , "orientation_noise_std": 0.00})
         eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
-                        params={"noise_std": 0.01})
+                        params={"noise_std": 0.001})
         eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
-                        params={"noise_std": 0.01})
+                        params={"noise_std": 0.001})
         gripper_pos = ObsTerm(func=mdp.gripper_pos_with_noise,
-                        params={"noise_std": 0.005})
+                        params={"noise_std": 0.02})
 
         # Keep other observations as they are
         actions = ObsTerm(func=mdp.last_action)
@@ -103,7 +155,6 @@ class ObservationsCfg:
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         cube_positions = ObsTerm(func=mdp.cube_positions_in_world_frame)
         cube_orientations = ObsTerm(func=mdp.cube_orientations_in_world_frame)
-    
         def __post_init__(self):
             self.enable_corruption = False
             self.concatenate_terms = False
@@ -154,7 +205,84 @@ class ObservationsCfg:
     policy: PolicyCfg = PolicyCfg()
     rgb_camera: RGBCameraPolicyCfg = RGBCameraPolicyCfg()
     subtask_terms: SubtaskCfg = SubtaskCfg()
+@configclass
+class ObservationsCfgRGB:
+    """Observation specifications for the MDP."""
 
+    @configclass
+    class PolicyCfg(ObsGroup):
+        """Observations for policy group with state values."""
+
+        # Implement observation noise -> Simulate state estimation errors
+        object = ObsTerm(func=mdp.object_obs_with_noise,
+                        params={"position_noise_std": 0.03 , "orientation_noise_std": 0.00})
+        eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
+                        params={"noise_std": 0.001})
+        eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
+                        params={"noise_std": 0.001})
+        gripper_pos = ObsTerm(func=mdp.gripper_pos_with_noise,
+                        params={"noise_std": 0.02})
+
+        # Keep other observations as they are
+        actions = ObsTerm(func=mdp.last_action)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        cube_positions = ObsTerm(func=mdp.cube_positions_in_world_frame)
+        cube_orientations = ObsTerm(func=mdp.cube_orientations_in_world_frame)
+        
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
+    @configclass
+    class RGBCameraPolicyCfg(ObsGroup):
+        """Observations for policy group with RGB images."""
+        image = ObsTerm(
+            func=mdp.image_features,
+            params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "rgb", "model_name": "resnet18"},
+        )
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
+    @configclass
+    class SubtaskCfg(ObsGroup):
+        """Observations for subtask group."""
+
+        # cube_1: blue, cube_2: red, cube_3: green
+        grasp_1 = ObsTerm(
+            func=mdp.object_grasped, # Checks if cube_1 is grasped by the robot
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "ee_frame_cfg": SceneEntityCfg("ee_frame"),
+                "object_cfg": SceneEntityCfg("cube_2"),
+            },
+        )
+        stack_1 = ObsTerm(
+            func=mdp.object_stacked, # Checks if cube_2 is stacked on cube_1
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "upper_object_cfg": SceneEntityCfg("cube_2"),
+                "lower_object_cfg": SceneEntityCfg("cube_1"),
+            },
+        )
+        grasp_2 = ObsTerm(
+            func=mdp.object_grasped, # Checks if cube_3 is grasped by the robot
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "ee_frame_cfg": SceneEntityCfg("ee_frame"),
+                "object_cfg": SceneEntityCfg("cube_3"),
+            },
+        )
+
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
+    # Create observation groups "key value pairs"
+    policy: PolicyCfg = PolicyCfg()
+    rgb_camera: RGBCameraPolicyCfg = RGBCameraPolicyCfg()
+    subtask_terms: SubtaskCfg = SubtaskCfg()
 # The domain randomization events are applied during environment resets
 @configclass 
 class DomainRandomizationCfg:
@@ -228,7 +356,52 @@ class DomainRandomizationCfg:
             "latency_steps_range": (0, 1),  # 0-3 timesteps delay (0-150ms at 20Hz)
         },
     )
-
+    """randomize_visual_color= EventTerm(
+                func=mdp.randomize_visual_color,         # your class
+                # parameters passed to __init__ of your class
+                params={
+                    "asset_cfg": SceneEntityCfg("cube_1"),
+                    "colors": {                      # random RGB ranges
+                        "r": (0.0, 1.0),
+                        "g": (0.0, 1.0),
+                        "b": (0.0, 1.0),
+                    },
+                    "event_name": "COLOR_EVENT",
+                    "mesh_name": "body_0/mesh",
+                },
+                mode="reset",                        # trigger at reset
+            )
+    randomize_visual_color= EventTerm(
+                func=mdp.randomize_visual_color,         # your class
+                # parameters passed to __init__ of your class
+                params={
+                    "asset_cfg": SceneEntityCfg("cube_2"),
+                    "colors": {                      # random RGB ranges
+                        "r": (0.0, 1.0),
+                        "g": (0.0, 1.0),
+                        "b": (0.0, 1.0),
+                    },
+                    "event_name": "COLOR_EVENT",
+                    "mesh_name": "body_0/mesh",
+                },
+                mode="reset",                        # trigger at reset
+            )
+    randomize_visual_color= EventTerm(
+                func=mdp.randomize_visual_color,         # your class
+                # parameters passed to __init__ of your class
+                params={
+                    "asset_cfg": SceneEntityCfg("cube_3"),
+                    "colors": {                      # random RGB ranges
+                        "r": (0.0, 1.0),
+                        "g": (0.0, 1.0),
+                        "b": (0.0, 1.0),
+                    },
+                    "event_name": "COLOR_EVENT",
+                    "mesh_name": "body_0/mesh",
+                },
+                mode="reset",                        # trigger at reset
+            )"""
+ 
 
 @configclass
 class TerminationsCfg:
@@ -295,3 +468,48 @@ class StackEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+@configclass
+class StackEnvCfgRGB(ManagerBasedRLEnvCfg):
+    """Configuration for the stacking environment."""
+
+    # Scene settings
+    scene: ObjectTableSceneCfgRGB = ObjectTableSceneCfgRGB(num_envs=4096, env_spacing=2.5, replicate_physics=False)
+    # Basic settings
+    observations: ObservationsCfgRGB = ObservationsCfgRGB()
+    actions: ActionsCfg = ActionsCfg()
+    # MDP settings
+    terminations: TerminationsCfg = TerminationsCfg()
+    # Domain randomization settings
+    domain_randomization: DomainRandomizationCfg = DomainRandomizationCfg()
+
+    # Unused managers -> These are not used in imitation learning pipelines
+    commands = None
+    rewards = None
+    events = None
+    curriculum = None
+
+    # Configuration for viewing and interacting with the environment through an XR device.
+    xr: XrCfg = XrCfg(
+        anchor_pos=(-0.1, -0.5, -1.05),
+        anchor_rot=(0.866, 0, 0, -0.5),
+    )
+
+    def __post_init__(self):
+        """Post initialization."""
+        # general settings
+        # Control frequency is 20Hz (50ms), decimation is 5, so simulation runs at 100Hz (10ms)
+        self.decimation = 5
+        self.episode_length_s = 20.0
+        # simulation settings
+        self.sim.dt = 0.01  # 100Hz
+        self.sim.render_interval = self.decimation
+
+        # Enable domain randomization by default (can be disabled in child configs)
+        self.enable_domain_randomization = True
+
+        self.sim.physx.bounce_threshold_velocity = 0.2
+        self.sim.physx.bounce_threshold_velocity = 0.01
+        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physx.friction_correlation_distance = 0.00625
+        print("------------------------------------------------------------")

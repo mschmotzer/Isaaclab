@@ -42,3 +42,9 @@ class PreStepFlatPolicyObservationsRecorder(RecorderTerm):
 
     def record_pre_step(self):
         return "obs", self._env.obs_buf["policy"]
+    
+class PreStepRGBRecorder(RecorderTerm):
+    """Recorder term that records the policy group observations in each step."""
+
+    def record_pre_step(self):
+        return "obs", self._env.obs_buf["rgb_camera"]

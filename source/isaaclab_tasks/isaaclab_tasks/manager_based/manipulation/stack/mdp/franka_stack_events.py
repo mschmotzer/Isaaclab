@@ -7,8 +7,10 @@
 from __future__ import annotations
 
 import math
+from turtle import color
 import numpy as np
 import random
+from isaaclab.sim.spawners.materials.visual_materials_cfg import PreviewSurfaceCfg
 import torch
 from typing import TYPE_CHECKING
 
@@ -16,7 +18,7 @@ import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, AssetBase
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.envs import ManagerBasedRLEnv
-
+import isaaclab.sim as sim_utils
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -75,7 +77,142 @@ def randomize_scene_lighting_domelight(
     intensity_attr = light_prim.GetAttribute("inputs:intensity")
     intensity_attr.Set(new_intensity)
 
-
+"""def change_color(env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg = SceneEntityCfg("cube_1"), intensity_range: float = 0.2):
+ 
+    # Generate random color
+    r = random.uniform(0.0, 1.0)
+    g = random.uniform(0.0, 1.0) 
+    b = random.uniform(0.0, 1.0)
+    
+    asset: AssetBase = env.scene[asset_cfg.name]
+    prim_path = asset.cfg.prim_path
+    
+    # Get the actual USD prim object using Isaac Lab utilities
+    prim = sim_utils.find_first_matching_prim(prim_path)
+    
+    # Find the material binding
+    from pxr import UsdShade
+    material_binding_api = UsdShade.MaterialBindingAPI(prim)
+    material, _ = material_binding_api.ComputeBoundMaterial()
+    print("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", material)
+    if material:
+        # Get the shader and modify its diffuse color
+        shader = material.GetSurfaceOutput().GetConnectedSource()[0]
+        print("Shader:", shader)
+        if shader:
+            diffuse_color_input = shader.GetInput("diffuseColor")
+            print("Diffuse Color Input:", diffuse_color_input)
+            if diffuse_color_input:
+                diffuse_color_input.Set((r,g,b))
+                print("Color changed to:", (r, g, b))"""
+def change_color(env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg = SceneEntityCfg("cube_1"), intensity_range: float = 0.2):
+    import random
+    from pxr import UsdShade, Gf
+    
+    # Generate random color
+    r = random.uniform(0.0, 1.0)
+    g = random.uniform(0.0, 1.0) 
+    b = random.uniform(0.0, 1.0)
+    
+    asset: AssetBase = env.scene[asset_cfg.name]
+    
+    print(f"Trying to change color of: {asset_cfg.name}")
+    print(f"New color: ({r}, {g}, {b})")
+    print(f"Asset prim path template: {asset.cfg.prim_path}")
+    
+    # Get the correct stage
+    stage = sim_utils.SimulationContext.instance().stage
+    
+    # Use the asset's actual prim paths for each environment
+    if hasattr(asset, 'prim_paths'):
+        print(f"Asset has prim_paths: {asset.prim_paths}")
+        # Use the actual prim paths from the asset
+        for env_idx, env_id in enumerate(env_ids):
+            if env_idx < len(asset.prim_paths):
+                actual_prim_path = asset.prim_paths[env_idx]
+                print(f"Using prim path for env {env_id}: {actual_prim_path}")
+            else:
+                # Fallback: manually construct the path
+                actual_prim_path = f"/World/envs/env_{env_id}/Cube_1"
+                print(f"Constructed prim path for env {env_id}: {actual_prim_path}")
+            
+            # Get the prim
+            prim = stage.GetPrimAtPath(actual_prim_path)
+            
+            if not prim or not prim.IsValid():
+                print(f"Invalid prim at path: {actual_prim_path}")
+                continue
+                
+            print(f"Valid prim found: {prim.GetPath()}")
+            
+            def find_and_modify_materials(prim):
+                """Recursively find and modify all materials in the prim hierarchy"""
+                # Check if this prim has a material
+                if prim.HasAPI(UsdShade.MaterialBindingAPI):
+                    material_binding_api = UsdShade.MaterialBindingAPI(prim)
+                    material, _ = material_binding_api.ComputeBoundMaterial()
+                    
+                    if material:
+                        print(f"Found material on prim: {prim.GetPath()}")
+                        surface_output = material.GetSurfaceOutput()
+                        if surface_output:
+                            connections = surface_output.GetConnectedSources()
+                            if connections:
+                                shader_prim = connections[0][0]
+                                shader = UsdShade.Shader(shader_prim)
+                                
+                                # Try multiple color input names
+                                color_inputs = ["diffuseColor", "baseColor", "diffuse_color_constant", "inputs:diffuseColor", "inputs:baseColor"]
+                                
+                                for input_name in color_inputs:
+                                    color_input = shader.GetInput(input_name)
+                                    if color_input:
+                                        print(f"Found and setting color input: {input_name}")
+                                        color_input.Set(Gf.Vec3f(r, g, b))
+                                        return True
+                
+                # Also check for direct material properties on the prim itself
+                if prim.HasAttribute("material:surface:diffuseColor"):
+                    attr = prim.GetAttribute("material:surface:diffuseColor")
+                    attr.Set(Gf.Vec3f(r, g, b))
+                    print("Set diffuseColor attribute directly")
+                    return True
+                    
+                return False
+            
+            # Try to find and modify materials on this prim
+            material_found = find_and_modify_materials(prim)
+            
+            # If no material found, search child prims
+            if not material_found:
+                print("Searching child prims for materials...")
+                for child in prim.GetAllChildren():
+                    print(f"Checking child: {child.GetPath()}")
+                    if find_and_modify_materials(child):
+                        material_found = True
+                        print(f"Material found and modified in child: {child.GetPath()}")
+                        break
+            
+            if not material_found:
+                print(f"No materials found for env {env_id}")
+            else:
+                print(f"Successfully changed color for env {env_id}")
+    
+    else:
+        print("Asset does not have prim_paths attribute")
+        # Fallback to manual path construction
+        for env_id in env_ids:
+            actual_prim_path = f"/World/envs/env_{env_id}/Cube_1"
+            print(f"Fallback prim path for env {env_id}: {actual_prim_path}")
+            
+            prim = stage.GetPrimAtPath(actual_prim_path)
+            if prim and prim.IsValid():
+                print(f"Valid prim found: {prim.GetPath()}")
+                # Continue with material modification...
+            else:
+                print(f"Invalid prim at fallback path: {actual_prim_path}")
+    
+  
 def sample_object_poses(
     num_objects: int,
     min_separation: float = 0.0,

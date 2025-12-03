@@ -9,6 +9,8 @@ import gymnasium as gym
 
 from .franka_stack_ik_abs_mimic_env import FrankaCubeStackIKAbsMimicEnv
 from .franka_stack_ik_abs_mimic_env_cfg import FrankaCubeStackIKAbsMimicEnvCfg
+from .franka_stack_ik_abs_mimic_env_rgb import FrankaCubeStackIKAbsMimicEnvRGB
+from .franka_stack_ik_abs_mimic_env_cfg_rgb import FrankaCubeStackIKAbsMimicEnvCfgRGB
 from .franka_stack_ik_rel_blueprint_mimic_env_cfg import FrankaCubeStackIKRelBlueprintMimicEnvCfg
 from .franka_stack_ik_rel_mimic_env import FrankaCubeStackIKRelMimicEnv
 from .franka_stack_ik_rel_mimic_env_cfg import FrankaCubeStackIKRelMimicEnvCfg
@@ -48,10 +50,10 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-Stack-Cube-Franka-IK-Abs-Mimic-v0",
-    entry_point="isaaclab_mimic.envs:FrankaCubeStackIKAbsMimicEnv",
+    id="Isaac-Stack-Cube-Franka-IK-Abs-Mimic-RGB-v0",
+    entry_point="isaaclab_mimic.envs:FrankaCubeStackIKAbsMimicEnvRGB",
     kwargs={
-        "env_cfg_entry_point": franka_stack_ik_abs_mimic_env_cfg.FrankaCubeStackIKAbsMimicEnvCfg,
+        "env_cfg_entry_point": franka_stack_ik_abs_mimic_env_cfg_rgb.FrankaCubeStackIKAbsMimicEnvCfgRGB,
     },
     disable_env_checker=True,
 )

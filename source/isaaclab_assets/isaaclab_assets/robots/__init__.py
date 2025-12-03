@@ -24,3 +24,5 @@ from .shadow_hand import *
 from .spot import *
 from .unitree import *
 from .universal_robots import *
+from .fr3 import FR3_WITH_HAND_CFG
+

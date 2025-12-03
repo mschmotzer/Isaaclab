@@ -247,11 +247,10 @@ def main():
                     while is_paused:
                         env.sim.render()
                         continue
-                env.step(actions)
+                obs, _ ,_ , _, info= env.step(actions)
 
                 # Comprehensive logging for debugging
                 current_state = env.scene.get_state(is_relative=False)
-                
                 # With absolute joint control, actions directly represent desired joint positions
                 for env_idx in range(num_envs):
                     if env_idx in env_episode_data_map and env_episode_data_map[env_idx].next_action_index > 0:
@@ -275,7 +274,10 @@ def main():
                             # Split into arm and gripper for comparison
                             arm_action = applied_action[:7]  # First 7 elements are arm joints
                             arm_positions = joint_pos[:7]   # First 7 elements are arm joints
-                            
+                            cube_pos = obs["policy"]["cube_positions"]
+                            print(f"📦 Cube Position: {cube_pos}")
+                            ee_pos = obs["policy"]["eef_pos"]
+                            print(f"✋ End-Effector Position: {ee_pos}")
                             # Show arm joint errors
                             arm_error = arm_action - arm_positions
                             arm_error_str = ", ".join([f"{val:.6f}" for val in arm_error])

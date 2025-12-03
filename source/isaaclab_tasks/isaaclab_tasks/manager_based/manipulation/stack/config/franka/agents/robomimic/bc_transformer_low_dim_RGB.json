@@ -47,7 +47,7 @@
         "pad_seq_length": false,
         "frame_stack": 1,
         "pad_frame_stack": true,
-        "dataset_keys": [
+        "dataset_keys": ["image",
             "actions"
         ],
         "goal_mode": null,
@@ -111,7 +111,8 @@
                 "low_dim": ["eef_pos",
                     "eef_quat",
                     "gripper_pos",
-                    "object"
+                    "object",
+                    "image"
                 ],
                 "rgb": [],
                 "depth": [],
