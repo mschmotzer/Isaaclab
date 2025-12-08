@@ -226,7 +226,7 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
         csv_data: List of CSV-formatted observation data if save_observations is True, else None.
     """
     # Episode initialization 
-    sequence_length = 24 # T
+    sequence_length = 2 # T
     B = 1  
     policy.start_episode()
     obs_dict, _ = env.reset()
@@ -238,7 +238,7 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
     observation_log = [] if save_observations else None
     csv_data = [] if save_observations else None
 
-    training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object"]
+    training_obs_keys = ["eef_pos", "eef_quat", "gripper_pos", "object", "image"]
                    # batch size
 
     # Buffer for one observation group (e.g., "policy")
@@ -249,8 +249,12 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
         for ob in obs:
             obs[ob] = torch.squeeze(obs[ob])
 
-        # 2. Filter observations
+        # 2. Filt   er observations
         filtered_obs = {key: obs[key] for key in training_obs_keys if key in obs}
+        
+        # Add image data if needed
+        if "image" in training_obs_keys and "rgb_camera" in obs_dict and "image" in obs_dict["rgb_camera"]:
+            filtered_obs["image"] = obs_dict["rgb_camera"]["image"]
         # 3. Append new obs (real timestep) 
         if sequence_length > 1:
             for key in filtered_obs:
@@ -270,7 +274,7 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
 
                 if len(observation_buffer[key]) > sequence_length:
                     observation_buffer[key].pop(-1)"""
-
+                #print(new_obs)
             # Only stack if buffer is full
             inputs = None
             if all(len(observation_buffer[k]) == sequence_length for k in observation_buffer):

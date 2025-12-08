@@ -75,14 +75,13 @@ class EventCfg:
 
 
         
-    randomize_visual_color= EventTerm(
-        func=franka_stack_events.change_color,         # your class
-        # parameters passed to __init__ of your class
+    randomize_clight_brightness = EventTerm(
+        func=franka_stack_events.randomize_scene_lighting_domelight,
+        mode="reset",
         params={
-            "asset_cfg": SceneEntityCfg("cube_1"),
-            "intensity_range": 0.2 
+            "asset_cfg": SceneEntityCfg("light"),
+            "intensity_range": (1500, 5000),
         },
-        mode="reset",                        # trigger at reset
     )
 
 
@@ -147,7 +146,7 @@ class FrankaCubeStackEnvCfg(StackEnvCfg):
         # Set actions for the specific robot type (franka) -> Action space is joint position
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot", 
-            joint_names=["fr3_joint.*"], 
+            joint_names=["panda_joint.*"], 
             scale=1, 
             use_default_offset=False # Absolute joint position control, no offset needed
         )
@@ -155,9 +154,9 @@ class FrankaCubeStackEnvCfg(StackEnvCfg):
         # Gripper actions
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
             asset_name="robot",
-            joint_names=["fr3_finger.*"],
-            open_command_expr={"fr3_finger_.*": 0.04},
-            close_command_expr={"fr3_finger_.*": 0.0},
+            joint_names=["panda_finger.*"],
+            open_command_expr={"panda_finger_.*": 0.04},
+            close_command_expr={"panda_finger_.*": 0.0},
         )
 
         # Rigid body properties of each cube
@@ -208,19 +207,19 @@ class FrankaCubeStackEnvCfg(StackEnvCfg):
         marker_cfg.prim_path = "/Visuals/FrameTransformer"
         # Defines end-effector frame transformer
         self.scene.ee_frame = FrameTransformerCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/fr3_link0",
+            prim_path="{ENV_REGEX_NS}/Robot/panda_link0",
             debug_vis=True,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
-                    prim_path="{ENV_REGEX_NS}/Robot/fr3_hand",
+                    prim_path="{ENV_REGEX_NS}/Robot/panda_hand",
                     name="end_effector",
                     offset=OffsetCfg(
                         pos=[0.00, 0.0, 0.1034],  # type: ignore  pos=[0.0, 0.0, 0.1034]
                     ),
                 ),
                 FrameTransformerCfg.FrameCfg(
-                    prim_path="{ENV_REGEX_NS}/Robot/fr3_link0",
+                    prim_path="{ENV_REGEX_NS}/Robot/panda_link0",
                     name="base",
                     offset=OffsetCfg(
                         pos=(0.0, 0.0, 0.0),  # type: ignore
@@ -235,7 +234,6 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
 
         # Set standard events
         self.events = EventCfg()
-        
         # Add domain randomization events if enabled, enter if self.enable_domain_randomization is True
         if self.enable_domain_randomization:
             # Loop through every attribute (event) in the domain randomization config class
@@ -319,6 +317,7 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
                 )
             ),
         )
+        print("---------------------------------------------------------------------------------------Cube 1 configured with blue color.", self.scene.cube_1 )
         self.scene.cube_2 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Cube_2",
             init_state=RigidObjectCfg.InitialStateCfg(pos=[0.55, 0.05, 0.0203], rot=[1, 0, 0, 0]),  # type: ignore
@@ -363,7 +362,7 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
                     offset=OffsetCfg(pos=[0.00, 0.0, 0.1034]),
                 ),
                 FrameTransformerCfg.FrameCfg(
-                    prim_path="{ENV_REGEX_NS}/Robot/fr3_link0",
+                    prim_path="{ENV_REGEX_NS}/Robot/fr3_link0",fr3_lin
                     name="base",
                     offset=OffsetCfg(pos=(0.0, 0.0, 0.0)),
                 ),

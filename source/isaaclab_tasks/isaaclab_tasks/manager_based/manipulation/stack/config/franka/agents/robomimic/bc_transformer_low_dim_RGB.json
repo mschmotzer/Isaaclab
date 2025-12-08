@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "200000_config_3_2_38",
+        "name": "RGB_only_RGB",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -108,10 +108,7 @@
     "observation": {
         "modalities": {
             "obs": {
-                "low_dim": ["eef_pos",
-                    "eef_quat",
-                    "gripper_pos",
-                    "object",
+                "low_dim": [
                     "image"
                 ],
                 "rgb": [],

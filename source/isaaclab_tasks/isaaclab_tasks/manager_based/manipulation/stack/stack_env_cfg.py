@@ -77,7 +77,7 @@ class ObjectTableSceneCfgRGB(InteractiveSceneCfg):
     # Table
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0.0, 0], rot=[0.707, 0, 0, 0.707]),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0.0, 0.011+0.017], rot=[0.707, 0, 0, 0.707]),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
             scale=(1, 1, 0.6762),
@@ -356,7 +356,7 @@ class DomainRandomizationCfg:
             "latency_steps_range": (0, 1),  # 0-3 timesteps delay (0-150ms at 20Hz)
         },
     )
-    """randomize_visual_color= EventTerm(
+    randomize_visual_color= EventTerm(
                 func=mdp.randomize_visual_color,         # your class
                 # parameters passed to __init__ of your class
                 params={
@@ -371,7 +371,7 @@ class DomainRandomizationCfg:
                 },
                 mode="reset",                        # trigger at reset
             )
-    randomize_visual_color= EventTerm(
+    """randomize_visual_color= EventTerm(
                 func=mdp.randomize_visual_color,         # your class
                 # parameters passed to __init__ of your class
                 params={

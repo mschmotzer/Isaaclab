@@ -10,9 +10,14 @@ import math
 from turtle import color
 import numpy as np
 import random
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
+from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.sim.spawners.materials.visual_materials_cfg import PreviewSurfaceCfg
 import torch
 from typing import TYPE_CHECKING
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+
 
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation, AssetBase
@@ -105,6 +110,152 @@ def randomize_scene_lighting_domelight(
             if diffuse_color_input:
                 diffuse_color_input.Set((r,g,b))
                 print("Color changed to:", (r, g, b))"""
+
+from pxr import Usd, UsdShade, Gf,Sdf
+
+import torch
+import random
+from pxr import Usd, UsdShade, Gf, Sdf, Tf
+def randomize_scene_light(env, env_ids, asset_cfg=None):
+    light = env.scene[asset_cfg.name]
+
+    # random brightness multiplier
+    intensity = random.uniform(200.0, 5000.0)
+
+    light.cfg.intensity = intensity
+
+    # write to sim
+    light.write_data_to_sim()
+
+
+"""def randomize_cube_color(
+    env,  # type: ManagerBasedEnv
+    env_ids: torch.Tensor,
+    asset_cfg=None  # type: SceneEntityCfg
+):
+    
+    Randomizes the color of cubes across environment instances.
+
+    Args:
+        env: ManagerBasedEnv
+        env_ids: torch.Tensor of environment indices to modify
+        asset_cfg: SceneEntityCfg with name of the cube, default "Cube_1"
+    
+    asset = env.scene[asset_cfg.name]
+    r, g, b = asset.cfg.spawn.visual_material.diffuse_color
+
+    # Clamp to 0-1
+    change_color = random.uniform(0.0, 0.3)
+    new_color = (
+        min(max(r , 0.0), 1.0),
+        min(max(g + change_color, 0.0), 1.0),
+        min(max(b + change_color, 0.0), 1.0),
+    )
+    asset.cfg.spawn.visual_material.diffuse_color = new_color
+    print(env.scene.rigid_objects["cube_1"].cfg.spawn.visual_material)
+    print(env.scene.rigid_objects["cube_1"].reset)
+    or i in range(env_ids.shape[0]):
+        (env.scene.rigid_objects["cube_1"])[.set_color((1,0,0
+
+    #for i in env_ids : env.scene.cube_1[i].set_visual_material(PreviewSurfaceCfg(diffuse_color=(0, 0, 0)))
+    print("fffffffffffffff", asset.cfg.prim_path)
+    for env_idx in env_ids.tolist():  # iterate over each environment instance
+        # Build exact prim path
+        cube_prim_path = f"/World/envs/env_{env_idx}/Cube_1"
+        print(f"Randomizing color of cube at path: {cube_prim_path}")
+
+        prim = env.scene.stage.GetPrimAtPath(cube_prim_path)
+        if not prim or not prim.IsValid():
+            print(f"[Warning] Prim {cube_prim_path} not found! Skipping...")
+            continue
+
+        # Ensure 'Looks' exists
+        looks = prim.GetChild("Looks")
+        if not looks or not looks.IsValid():
+            looks = prim.GetStage().DefinePrim(f"{cube_prim_path}/Looks", "Scope")
+
+        # Ensure material exists
+        material_prim_path = f"{cube_prim_path}/Looks/{cube_name}_Material"
+        material_prim = env.scene.stage.GetPrimAtPath(material_prim_path)
+        if not material_prim or not material_prim.IsValid():
+            material = UsdShade.Material.Define(env.scene.stage, material_prim_path)
+        else:
+            material = UsdShade.Material(material_prim)
+
+        # Create a shader
+        shader_path = f"{material_prim_path}/Shader"
+        shader = UsdShade.Shader.Define(env.scene.stage, shader_path)
+        shader.CreateIdAttr("UsdPreviewSurface")
+
+        # Pick a random color
+        r = random.random()
+        g = random.random()
+        b = random.random()
+        color = Gf.Vec3f(r, g, b)
+
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(color)
+
+        # Corrected: use Tf.Token instead of string
+        material.GetSurfaceOutput().ConnectToSource(shader, Tf.Token("surface"))
+
+        print(f"Set color of {cube_prim_path} to ({r:.2f}, {g:.2f}, {b:.2f})")"""
+
+
+
+"""def randomize_cube_color( env: ManagerBasedEnv,env_ids: torch.Tensor, asset_cfg: SceneEntityCfg = SceneEntityCfg("cube_1")):
+
+    prim_path = env.scene[asset_cfg.name].cfg.prim_path
+    print(f"Changing color of prim at path: {prim_path}")
+    prim = env.scene.stage.GetPrimAtPath(prim_path)
+    material = UsdShade.Material(prim.GetChild("Looks").GetChild("MyMaterial"))
+
+    if env.scene.stage.GetPrimAtPath(prim_path):
+        env.scene.stage.RemovePrim(prim_path)
+    shader = UsdShade.Shader.Define(env.scene.stage, "/World/MyObject/Looks/MyMaterial/Shader")
+    shader.CreateIdAttr("UsdPreviewSurface")
+
+    # Set parameters
+    shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(1.0, 0.0, 0.0))  # Red
+    material.GetSurfaceOutput().ConnectToSource(shader, "surface")
+
+    cube_properties = RigidBodyPropertiesCfg(
+            solver_position_iteration_count=16,
+            solver_velocity_iteration_count=1,
+            max_angular_velocity=1000.0,
+            max_linear_velocity=1000.0,
+            max_depenetration_velocity=5.0,
+            disable_gravity=False,
+        )
+    c=(1,np.random.uniform(0.0, 1.0), 0)
+    print(c)
+    env.scene.cube_1 = RigidObjectCfg(
+            prim_path="{ENV_REGEX_NS}/Cube_1",
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.4, 0.0, 0.0203], rot=[1, 0, 0, 0]),    # type: ignore
+            spawn=UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
+                scale=(1.0, 1.0, 1.0),
+                rigid_props=cube_properties,
+                semantic_tags=[("class", "cube_1")],
+            visual_material=sim_utils.PreviewSurfaceCfg(
+                    diffuse_color=c  # RGB color
+                )
+            ),
+        )
+
+    # Add random offset and clamp between 0 and 1
+    new_color = (
+        min(max(r + change_color, 0.0), 1.0),
+        min(max(g + change_color, 0.0), 1.0),
+        min(max(b + change_color, 0.0), 1.0)
+    )
+    print(asset.cfg.spawn.visual_material.diffuse_color ,"-----> New color:", new_color)
+    # Assign to the asset's visual material
+    asset.set_visual_material(PreviewSurfaceCfg(diffuse_color=new_color))"""
+
+
+
+
+
 def change_color(env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg = SceneEntityCfg("cube_1"), intensity_range: float = 0.2):
     import random
     from pxr import UsdShade, Gf

@@ -1224,6 +1224,7 @@ class randomize_visual_texture_material(ManagerTermBase):
         rep.utils.send_og_event(event_name)
 
 
+        
 class randomize_visual_color(ManagerTermBase):
     """Randomize the visual color of bodies on an asset using Replicator API.
 

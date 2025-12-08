@@ -28,13 +28,13 @@ class FrankaCubeStackEnvCfg(stack_joint_pos_env_cfg.FrankaCubeStackEnvCfg):
         super().__post_init__() 
 
         # Set robot with stiffness and damping values of the real robot
-        self.scene.robot = FR3_WITH_HAND_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        #self.scene.robot = FR3_WITH_HAND_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         
         # Set actions for the specific robot type (franka), inverse kinematics control
         self.actions.arm_action = DifferentialInverseKinematicsActionCfg(
             asset_name="robot",
-            joint_names=["fr3_joint.*"],
-            body_name="fr3_hand",
+            joint_names=["panda_joint.*"],
+            body_name="panda_hand",
             # Define custom offset from the flange frame
             body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
                 pos=(0.0, 0.0, 0.0),  # Introduce a small offset to match the real robot's hand position
@@ -61,7 +61,7 @@ class FrankaCubeStackEnvCfgRGB(stack_joint_pos_env_cfg.FrankaCubeStackEnvCfgRGB)
             body_name="panda_hand",
             # Define custom offset from the flange frame
             body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
-                pos=(0.0, 0.0, 0.1034-0.018),  # Introduce a small offset to match the real robot's hand position
+                pos=(0.0, 0.0, 0.1034),  # Introduce a small offset to match the real robot's hand position
                 rot=(1.0, 0.0, 0.0, 0.0),
             ),
             # Use Differential Inverse Kinematics Controller 
