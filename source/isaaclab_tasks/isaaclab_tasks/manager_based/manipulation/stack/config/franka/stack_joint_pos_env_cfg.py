@@ -53,7 +53,7 @@ class EventCfg:
         mode="reset",
         params={
             "mean": 0.0,
-            "std": 0.01,
+            "std": 0.005,
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
@@ -62,7 +62,7 @@ class EventCfg:
         func=franka_stack_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.3, 0.6), "y": (-0.3, 0.3), "z": (0.0203, 0.0203), "yaw": (3.1415, 3.1415, 0)},
+            "pose_range": {"x": (0.3, 0.6), "y": (-0.3, 0.3), "z": (0.0203+0.017+0.011, 0.0203+0.017+0.011), "yaw": (3.1415, 3.1415, 0)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("cube_1"), SceneEntityCfg("cube_2"), SceneEntityCfg("cube_3")],
         },
@@ -278,12 +278,13 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
 
 
         # Set actions for the specific robot type (franka) -> Action space is joint position
-        """self.actions.arm_action = mdp.JointPositionActionCfg(
+        self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot", 
-            joint_names=["fr3_joint.*"], 
+            joint_names=["panda_joint.*"], 
             scale=1, 
             use_default_offset=False # Absolute joint position control, no offset needed
         )
+        """
 
         # Gripper actions
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
@@ -306,7 +307,7 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
         # Set each stacking cube deterministically
         self.scene.cube_1 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Cube_1",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.4, 0.0, 0.0203], rot=[1, 0, 0, 0]),    # type: ignore
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.4, 0.0, 0.0203+0.017+0.011], rot=[1, 0, 0, 0]),    # type: ignore
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
                 scale=(1.0, 1.0, 1.0),
@@ -317,10 +318,9 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
                 )
             ),
         )
-        print("---------------------------------------------------------------------------------------Cube 1 configured with blue color.", self.scene.cube_1 )
         self.scene.cube_2 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Cube_2",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.55, 0.05, 0.0203], rot=[1, 0, 0, 0]),  # type: ignore
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.55, 0.05, 0.0203+0.017+0.011], rot=[1, 0, 0, 0]),  # type: ignore
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/red_block.usd",
                 scale=(1.0, 1.0, 1.0),
@@ -333,7 +333,7 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
         )
         self.scene.cube_3 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Cube_3",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.60, -0.1, 0.0203], rot=[1, 0, 0, 0]),  # type: ignore
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.60, -0.1, 0.0203+0.017+0.011], rot=[1, 0, 0, 0]),  # type: ignore
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/green_block.usd",
                 scale=(1.0, 1.0, 1.0),
@@ -383,7 +383,7 @@ class FrankaCubeStackEnvCfgRGB(StackEnvCfgRGB):
     
         self.scene.ee_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/panda_link0",  # Base link as reference
-            debug_vis=True,
+            debug_vis=False,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(

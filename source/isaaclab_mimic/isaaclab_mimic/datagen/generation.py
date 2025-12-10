@@ -180,7 +180,7 @@ def setup_env_config(
     env_cfg.recorders = ActionStateRecorderManagerCfg()
     env_cfg.recorders.dataset_export_dir_path = output_dir
     env_cfg.recorders.dataset_filename = output_file_name
-
+    env_cfg.datagen_config.generation_keep_failed = False
     if env_cfg.datagen_config.generation_keep_failed:
         env_cfg.recorders.dataset_export_mode = DatasetExportMode.EXPORT_SUCCEEDED_FAILED_IN_SEPARATE_FILES
     else:

@@ -331,6 +331,7 @@ def randomize_rigid_body_mass(
 
     # set the mass into the physics simulation
     asset.root_physx_view.set_masses(masses, env_ids)
+    
 
     # recompute inertia tensors if needed
     if recompute_inertia:

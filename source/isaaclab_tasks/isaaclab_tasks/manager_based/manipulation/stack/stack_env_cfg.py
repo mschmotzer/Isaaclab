@@ -46,7 +46,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         # Add table offset in z direction to match the real robots configuration -> Offset coordinate frame by 0.011m
-        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0.0], rot=[0.707, 0, 0, 0.707]), # type: ignore
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0.011], rot=[0.707, 0, 0, 0.707]), # type: ignore
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
             scale=(1, 1, 0.6762),  # (x_scale, y_scale, z_scale)
@@ -141,7 +141,7 @@ class ObservationsCfg:
 
         # Implement observation noise -> Simulate state estimation errors
         object = ObsTerm(func=mdp.object_obs_with_noise,
-                        params={"position_noise_std": 0.03 , "orientation_noise_std": 0.00})
+                        params={"position_noise_std": 0.001 , "orientation_noise_std": 0.00})
         eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
                         params={"noise_std": 0.001})
         eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
@@ -215,13 +215,13 @@ class ObservationsCfgRGB:
 
         # Implement observation noise -> Simulate state estimation errors
         object = ObsTerm(func=mdp.object_obs_with_noise,
-                        params={"position_noise_std": 0.03 , "orientation_noise_std": 0.00})
+                        params={"position_noise_std": 0.005 , "orientation_noise_std": 0.01})
         eef_pos = ObsTerm(func=mdp.ee_frame_pos_with_noise,
                         params={"noise_std": 0.001})
         eef_quat = ObsTerm(func=mdp.ee_frame_quat_with_noise,
                         params={"noise_std": 0.001})
         gripper_pos = ObsTerm(func=mdp.gripper_pos_with_noise,
-                        params={"noise_std": 0.02})
+                        params={"noise_std": 0.0005})
 
         # Keep other observations as they are
         actions = ObsTerm(func=mdp.last_action)
@@ -241,6 +241,11 @@ class ObservationsCfgRGB:
             func=mdp.image_features,
             params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "rgb", "model_name": "resnet18"},
         )
+        """image = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "rgb"},
+        )"""
+
         def __post_init__(self):
             self.enable_corruption = False
             self.concatenate_terms = False
@@ -294,7 +299,7 @@ class DomainRandomizationCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "stiffness_distribution_params": (0.4,1.2),  # ±70% variation
+            "stiffness_distribution_params": (0.7,1.1),  # ±70% variation
             "damping_distribution_params": None,
             "operation": "scale",  # Scale the base values
             "distribution": "uniform",
@@ -356,7 +361,7 @@ class DomainRandomizationCfg:
             "latency_steps_range": (0, 1),  # 0-3 timesteps delay (0-150ms at 20Hz)
         },
     )
-    randomize_visual_color= EventTerm(
+    """randomize_visual_color= EventTerm(
                 func=mdp.randomize_visual_color,         # your class
                 # parameters passed to __init__ of your class
                 params={
@@ -371,7 +376,7 @@ class DomainRandomizationCfg:
                 },
                 mode="reset",                        # trigger at reset
             )
-    """randomize_visual_color= EventTerm(
+    randomize_visual_color= EventTerm(
                 func=mdp.randomize_visual_color,         # your class
                 # parameters passed to __init__ of your class
                 params={
@@ -458,7 +463,7 @@ class StackEnvCfg(ManagerBasedRLEnvCfg):
         self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.01  # 100Hz
-        self.sim.render_interval = self.decimation
+        self.sim.render_interval = 2
 
         # Enable domain randomization by default (can be disabled in child configs)
         self.enable_domain_randomization = True
@@ -505,7 +510,7 @@ class StackEnvCfgRGB(ManagerBasedRLEnvCfg):
         self.sim.render_interval = self.decimation
 
         # Enable domain randomization by default (can be disabled in child configs)
-        self.enable_domain_randomization = True
+        self.enable_domain_randomization = False
 
         self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01

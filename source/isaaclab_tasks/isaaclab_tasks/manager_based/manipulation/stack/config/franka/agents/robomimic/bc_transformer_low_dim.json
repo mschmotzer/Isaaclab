@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "200000_config_3_2_38",
+        "name": "7500_912",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,

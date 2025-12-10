@@ -226,7 +226,7 @@ def rollout(policy, env, success_term, horizon, device, save_observations=False,
         csv_data: List of CSV-formatted observation data if save_observations is True, else None.
     """
     # Episode initialization 
-    sequence_length = 2 # T
+    sequence_length = 1 # T
     B = 1  
     policy.start_episode()
     obs_dict, _ = env.reset()
